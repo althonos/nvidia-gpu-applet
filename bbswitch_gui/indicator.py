@@ -47,23 +47,7 @@ class Indicator(GObject.GObject):
     def _menu(self):
         menu = Gtk.Menu()
 
-        switch_item = Gtk.ImageMenuItem()
-        switch_item.set_always_show_image(True)  # type: ignore
-        switch_item.connect('activate', self._request_power_state_switch)
-
-        switch_item.set_label('Turn GPU Off' if self._enabled else
-                              'Turn GPU On')
-        switch_item.set_image(Gtk.Image.new_from_icon_name(
-            'bbswitch-on-symbolic' if self._enabled else
-            'bbswitch-off-symbolic',
-            Gtk.IconSize.MENU))  # type: ignore
-        switch_item.set_sensitive(self._sensitive)
-
-        menu.append(switch_item)
-
-        menu.append(Gtk.SeparatorMenuItem())
-
-        open_item = Gtk.MenuItem('Open Window')
+        open_item = Gtk.MenuItem('Open')
         open_item.connect('activate', self._request_open)
         menu.append(open_item)
 
