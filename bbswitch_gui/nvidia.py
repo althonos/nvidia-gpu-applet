@@ -42,13 +42,16 @@ class NVidiaGpuInfo(TypedDict):
     """Maximum power usage (W)"""
 
     mem_used: int
-    """Memory usage (MiB)"""
+    """Memory usage (B)"""
 
     mem_total: int
-    """Total GPU memory (MiB)"""
+    """Total GPU memory (B)"""
 
     gpu_util: int
     """GPU utilization (%)"""
+
+    gpu_freq: int
+    """GPU clock frequency (MHz)"""
 
     processes: List[NVidiaGpuProcessInfo]
     """List of processes running on GPU (see :class:`NVidiaGpuProcessInfo`)"""
@@ -70,13 +73,16 @@ class NVidiaGpuStats(TypedDict):
     """Maximum power usage (W)"""
 
     mem_used: int
-    """Memory usage (MiB)"""
+    """Memory usage (B)"""
 
     mem_total: int
-    """Total GPU memory (MiB)"""
+    """Total GPU memory (B)"""
 
     gpu_util: int
     """GPU utilization (%)"""
+
+    gpu_freq: int
+    """GPU clock frequency (MHz)"""
 
 
 class NvidiaMonitorException(Exception):
@@ -169,6 +175,7 @@ class NvidiaMonitor():
             'mem_used': 0,
             'mem_total': 0,
             'gpu_util': 0,
+            'gpu_freq': -1,
         }
 
         device_count = -1
@@ -190,12 +197,15 @@ class NvidiaMonitor():
             res['power_draw'] = power_usage / 1000.0
 
             try:
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(handle)
+                power_limit = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
             except pynvml.NVMLError as err:
                 if err.value != pynvml.NVML_ERROR_NOT_SUPPORTED:
                     raise
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(handle)
+                power_limit = pynvml.nvmlDeviceGetPowerManagementDefaultLimit(handle)
             res['power_limit'] = power_limit / 1000.0
+
+            clock_freq = pynvml.nvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_GRAPHICS)
+            res['gpu_freq'] = clock_freq
 
             return res
         except pynvml.NVMLError as err:
@@ -225,6 +235,7 @@ class NvidiaMonitor():
             'mem_used': 0,
             'mem_total': 0,
             'gpu_util': 0,
+            'gpu_freq': -1,
             'processes': [],
             'modules': []
         }
@@ -251,12 +262,15 @@ class NvidiaMonitor():
             res['power_draw'] = power_usage / 1000.0
 
             try:
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(handle)
+                power_limit = pynvml.nvmlDeviceGetPowerManagementLimit(handle)
             except pynvml.NVMLError as err:
                 if err.value != pynvml.NVML_ERROR_NOT_SUPPORTED:
                     raise
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(handle)
+                power_limit = pynvml.nvmlDeviceGetPowerManagementDefaultLimit(handle)
             res['power_limit'] = power_limit / 1000.0
+
+            clock_freq = pynvml.nvml.nvmlDeviceGetClockInfo(handle, pynvml.NVML_CLOCK_GRAPHICS)
+            res['gpu_freq'] = clock_freq
 
             # Get all pids from fuser, they may be not visible through NVML
             fuser_pids = PSUtil.get_fuser_pids(NVIDIA_DEV)

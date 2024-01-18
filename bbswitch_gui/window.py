@@ -34,6 +34,7 @@ class MainWindow(Gtk.ApplicationWindow):
     power_label = cast(Gtk.Label, Gtk.Template.Child())
     memory_label = cast(Gtk.Label, Gtk.Template.Child())
     utilization_label = cast(Gtk.Label, Gtk.Template.Child())
+    freq_label = cast(Gtk.Label, Gtk.Template.Child())
 
     bar_stack = cast(Gtk.Stack, Gtk.Template.Child())
     info_label = cast(Gtk.Label, Gtk.Template.Child())
@@ -137,6 +138,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.power_label.set_text(f"{gpu_info['power_draw']:.2f} / {gpu_info['power_limit']:.0f} W")
         self.memory_label.set_text(format_mem(gpu_info['mem_used'], gpu_info['mem_total']))
         self.utilization_label.set_text(str(gpu_info['gpu_util']) + ' %')
+        self.freq_label.set_text(f"{gpu_info['gpu_freq']} MHz")
 
         # Update existing PIDs
         processes = gpu_info['processes'].copy()
