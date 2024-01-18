@@ -20,14 +20,15 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)s \033[1m%(levelname)s\033[0m %(message)s')
 logger = logging.getLogger(__name__)
 
-REFRESH_TIMEOUT = 1      # How often to refresh nvidia monitor data, in seconds
+REFRESH_TIMEOUT_VISIBLE = 1  # How often to refresh nvidia monitor data when window is active, in seconds
+REFRESH_TIMEOUT_HIDDEN = 5 # How often to refresh nvidia monitor data when window is hidden, in seconds
 MODULE_LOAD_TIMEOUT = 5  # How long to wait until nvidia module become accessible, in seconds
 
 
 class Application(Gtk.Application):
     """Main application class allowing only one running instance."""
 
-    nvidia = NvidiaMonitor(timeout=REFRESH_TIMEOUT)
+    nvidia = NvidiaMonitor()
 
     def __init__(self, *args, **kwargs) -> None:
         """Initialize application instance, setup command line handler."""
@@ -82,35 +83,34 @@ class Application(Gtk.Application):
         else:
             timeout_expired = True
 
-        if not self.window.is_visible():
-            gpu_stats = self.nvidia.gpu_stats(bus_id)
-            self.indicator.set_gpu_stats(gpu_stats)
-            return
+        gpu_stats = self.nvidia.gpu_stats(bus_id)
+        self.indicator.set_gpu_stats(gpu_stats)
 
-        message = None
-        try:
-            gpu_info = self.nvidia.gpu_info(bus_id)
-            if self.window:
-                if gpu_info is None:
-                    # None return value means no kernel modules available
-                    message = 'GPU is turned on, but NVIDIA kernel modules are not loaded'
-                else:
-                    self.window.update_monitor(gpu_info)
-        except NvidiaMonitorException as err:
-            message = str(err)
-
-        if message is not None:
-            if timeout_expired:
-                # If it took really long time, display warning
-                logger.warning(message)
+        if self.window.is_visible():
+            message = None
+            try:
+                gpu_info = self.nvidia.gpu_info(bus_id)
                 if self.window:
-                    self.window.show_warning(message)
-                if not self.window or not self.window.is_visible():
-                    self._notify_error('NVIDIA monitor error', message)
-                self.nvidia.monitor_stop()
-            elif self.window:
-                # Otherwise it's normal, loading modules can take some time
-                self.window.show_info('Loading NVIDIA kernel modules...')
+                    if gpu_info is None:
+                        # None return value means no kernel modules available
+                        message = 'GPU is turned on, but NVIDIA kernel modules are not loaded'
+                    else:
+                        self.window.update_monitor(gpu_info)
+            except NvidiaMonitorException as err:
+                message = str(err)
+
+            if message is not None:
+                if timeout_expired:
+                    # If it took really long time, display warning
+                    logger.warning(message)
+                    if self.window:
+                        self.window.show_warning(message)
+                    if not self.window or not self.window.is_visible():
+                        self._notify_error('NVIDIA monitor error', message)
+                    self.nvidia.monitor_stop()
+                elif self.window:
+                    # Otherwise it's normal, loading modules can take some time
+                    self.window.show_info('Loading NVIDIA kernel modules...')
 
     def do_startup(self, *args, **kwargs) -> None:
         """Handle application startup."""
@@ -172,6 +172,7 @@ class Application(Gtk.Application):
 
         # Is GUI initialized
         initialized = self.window is not None
+        timeout = REFRESH_TIMEOUT_HIDDEN
 
         self.activate()
 
@@ -179,8 +180,10 @@ class Application(Gtk.Application):
             if 'minimize' in options:
                 self._bg_notification_shown = True
                 self.window.hide()
+                timeout = REFRESH_TIMEOUT_HIDDEN
             else:
                 self.window.show()
+                timeout = REFRESH_TIMEOUT_VISIBLE
 
         if self.indicator:
             self.indicator.reset()
@@ -192,6 +195,7 @@ class Application(Gtk.Application):
 
         #
         self.nvidia.monitor_start(
+            timeout,
             self.update_nvidia,
             self._enabled_gpu,
             self._switch_time
@@ -227,13 +231,18 @@ class Application(Gtk.Application):
         del window  # unused argument
         self.withdraw_notification('running_in_bg')
         if self._enabled_gpu:
-            self.nvidia.monitor_start(self.update_nvidia,
+            self.nvidia.monitor_start(REFRESH_TIMEOUT_VISIBLE,
+                                      self.update_nvidia,
                                       self._enabled_gpu,
                                       self._switch_time)
 
     def _on_window_hide(self, window):
         del window  # unused argument
-        # self.nvidia.monitor_stop()
+        if self._enabled_gpu:
+            self.nvidia.monitor_start(REFRESH_TIMEOUT_HIDDEN,
+                                      self.update_nvidia,
+                                      self._enabled_gpu,
+                                      self._switch_time)
 
     def _on_window_close(self, window, event):
         del event  # unused argument

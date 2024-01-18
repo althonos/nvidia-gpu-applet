@@ -80,12 +80,12 @@ class NvidiaMonitorException(Exception):
 class NvidiaMonitor():
     """Wrapper for executing nvidia-smi and parsing output."""
 
-    def __init__(self, timeout: int = 1) -> None:
+    def __init__(self) -> None:
         """Initialize monitoring for `nvidia-smi` output.
 
         :param timeout: How often to check for GPU information, in seconds
         """
-        self.timeout: int = timeout
+        self.timeout: Optional[int] = 0
         self.timer: Optional[int] = None
         self.callback: Optional[Callable] = None
         self.callback_args: Tuple[Any, ...] = ()
@@ -267,7 +267,7 @@ class NvidiaMonitor():
 
         raise NvidiaMonitorException(f'GPU {bus_id} not found in nvidia-smi')
 
-    def monitor_start(self, on_change: Callable, *on_change_args) -> None:
+    def monitor_start(self, timeout: int, on_change: Callable, *on_change_args) -> None:
         """Start monitoring changes of nvidia-smi info.
 
         Calls the callback with optional arguments every several seconds.
@@ -278,8 +278,15 @@ class NvidiaMonitor():
         """
         self.callback = on_change
         self.callback_args = on_change_args
+
+        if self.timeout != timeout:
+            self.timeout = timeout
+            if self.timer is not None:
+                GObject.source_remove(self.timer)
+                self.timer = None
+
         if self.timer is None and self.callback is not None:
-            self.timer = GObject.timeout_add_seconds(self.timeout, self._timer_callback)
+            self.timer = GObject.timeout_add_seconds(timeout, self._timer_callback)
             self._timer_callback()
 
     def monitor_stop(self) -> None:
