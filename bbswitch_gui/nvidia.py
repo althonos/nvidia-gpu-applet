@@ -38,6 +38,9 @@ class NVidiaGpuInfo(TypedDict):
     power_draw: float
     """Power usage (W)"""
 
+    power_limit: float
+    """Maximum power usage (W)"""
+
     mem_used: int
     """Memory usage (MiB)"""
 
@@ -62,6 +65,9 @@ class NVidiaGpuStats(TypedDict):
 
     power_draw: float
     """Power usage (W)"""
+
+    power_limit: float
+    """Maximum power usage (W)"""
 
     mem_used: int
     """Memory usage (MiB)"""
@@ -159,6 +165,7 @@ class NvidiaMonitor():
         res: NVidiaGpuStats = {
             'gpu_temp': 0,
             'power_draw': 0.0,
+            'power_limit': 0.0,
             'mem_used': 0,
             'mem_total': 0,
             'gpu_util': 0,
@@ -181,6 +188,12 @@ class NvidiaMonitor():
 
             power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
             res['power_draw'] = power_usage / 1000.0
+
+            try:
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(h)
+            except pynvml.NVMLError:
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(h)
+            res['power_limit'] = power_limit / 1000.0
 
             return res
         except pynvml.NVMLError as err:
@@ -206,6 +219,7 @@ class NvidiaMonitor():
         res: NVidiaGpuInfo = {
             'gpu_temp': 0,
             'power_draw': 0.0,
+            'power_limit': 0.0,
             'mem_used': 0,
             'mem_total': 0,
             'gpu_util': 0,
@@ -233,6 +247,12 @@ class NvidiaMonitor():
 
             power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
             res['power_draw'] = power_usage / 1000.0
+
+            try:
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(h)
+            except pynvml.NVMLError:
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(h)
+            res['power_limit'] = power_limit / 1000.0
 
             # Get all pids from fuser, they may be not visible through NVML
             fuser_pids = PSUtil.get_fuser_pids(NVIDIA_DEV)
