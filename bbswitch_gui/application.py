@@ -169,6 +169,9 @@ class Application(Gtk.Application):
             else:
                 self.window.show()
 
+        if self.indicator:
+            self.indicator.reset()
+
         return 0
 
     def _on_activate(self, widget=None, data=None):
