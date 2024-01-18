@@ -114,19 +114,12 @@ class NvidiaMonitor():
         device_count = -1
         try:
             pynvml.nvmlInit()
-            device_count = pynvml.nvmlDeviceGetCount()
-            for i in range(0, device_count):
-                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-                pci_info = pynvml.nvmlDeviceGetPciInfo(handle)
-                if not self._check_bus_id(pci_info, bus_id):
-                    continue
-                name = pynvml.nvmlDeviceGetName(handle)
-                return name
+            handle = pynvml.nvmlDeviceGetHandleByPciBusId(bus_id)
+            return pynvml.nvmlDeviceGetName(handle)
         except pynvml.NVMLError as err:
             if err.value == pynvml.NVML_ERROR_DRIVER_NOT_LOADED:  # type: ignore
                 # If driver is not loaded, just ignore this and return None
                 return None
-
             raise NvidiaMonitorException(f'NVMLError: {err}') from err
         finally:
             # Don't forget to release resources
@@ -159,48 +152,41 @@ class NvidiaMonitor():
         device_count = -1
         try:
             pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByPciBusId(bus_id)
 
-            device_count = pynvml.nvmlDeviceGetCount()
-            for i in range(0, device_count):
-                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
-                pci_info = pynvml.nvmlDeviceGetPciInfo(handle)
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            res['mem_total'] = round(int(mem_info.total) / 1024 / 1024)
+            res['mem_used'] = round(int(mem_info.used) / 1024 / 1024)
 
-                if not self._check_bus_id(pci_info, bus_id):
+            util_rates = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            res['gpu_util'] = int(util_rates.gpu)
+
+            gpu_temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+            res['gpu_temp'] = gpu_temp
+
+            power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
+            res['power_draw'] = power_usage / 1000.0
+
+            # Get all pids from fuser, they may be not visible through NVML
+            fuser_pids = PSUtil.get_fuser_pids(NVIDIA_DEV)
+            # Get everything available from NVML, gather memory usage
+            for proc in pynvml.nvmlDeviceGetComputeRunningProcesses(handle) \
+                    + pynvml.nvmlDeviceGetGraphicsRunningProcesses(handle):
+                # If process was listed by fuser, remove it, we will add more info
+                if proc.pid in fuser_pids:
+                    fuser_pids.remove(proc.pid)
+                # If process was already added (like in case of C+G type)
+                if next((p for p in res['processes'] if p['pid'] == proc.pid), None):
                     continue
+                self._add_process(res['processes'],
+                                    proc.pid,
+                                    round(proc.usedGpuMemory / 1024 / 1024))
 
-                mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                res['mem_total'] = round(int(mem_info.total) / 1024 / 1024)
-                res['mem_used'] = round(int(mem_info.used) / 1024 / 1024)
+            # Add all fuser PIDs that were not present in NVML
+            for pid in fuser_pids:
+                self._add_process(res['processes'], pid, -1)
 
-                util_rates = pynvml.nvmlDeviceGetUtilizationRates(handle)
-                res['gpu_util'] = int(util_rates.gpu)
-
-                gpu_temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
-                res['gpu_temp'] = gpu_temp
-
-                power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
-                res['power_draw'] = power_usage / 1000.0
-
-                # Get all pids from fuser, they may be not visible through NVML
-                fuser_pids = PSUtil.get_fuser_pids(NVIDIA_DEV)
-                # Get everything available from NVML, gather memory usage
-                for proc in pynvml.nvmlDeviceGetComputeRunningProcesses(handle) \
-                        + pynvml.nvmlDeviceGetGraphicsRunningProcesses(handle):
-                    # If process was listed by fuser, remove it, we will add more info
-                    if proc.pid in fuser_pids:
-                        fuser_pids.remove(proc.pid)
-                    # If process was already added (like in case of C+G type)
-                    if next((p for p in res['processes'] if p['pid'] == proc.pid), None):
-                        continue
-                    self._add_process(res['processes'],
-                                      proc.pid,
-                                      round(proc.usedGpuMemory / 1024 / 1024))
-
-                # Add all fuser PIDs that were not present in NVML
-                for pid in fuser_pids:
-                    self._add_process(res['processes'], pid, -1)
-
-                return res
+            return res
         except pynvml.NVMLError as err:
             if err.value == pynvml.NVML_ERROR_DRIVER_NOT_LOADED:  # type: ignore
                 # If driver is not loaded, just ignore this and return None

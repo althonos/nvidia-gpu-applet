@@ -155,14 +155,20 @@ class Application(Gtk.Application):
             logging.getLogger().setLevel(logging.DEBUG)
             logger.debug('Verbose output enabled')
 
+        # detect CPU to use based on the CLI
+        device_id = options.get('device', 0)
+        self._enabled_gpu = self.nvidia.get_bus_id(device_id)
+        if self._enabled_gpu:
+            logger.debug('Detected GPU %i on PCI bus %s', device_id, self._enabled_gpu)
+        else:
+            logger.debug('Failed to detected GPU %i')
+
         # Is GUI initialized
         initialized = self.window is not None
 
         self.activate()
 
         if self.window:
-            device_id = options.get('device', 0)
-            self._enabled_gpu = self.nvidia.get_bus_id(device_id)
             if 'minimize' in options:
                 self._bg_notification_shown = True
                 self.window.hide()
