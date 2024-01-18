@@ -5,6 +5,8 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('AppIndicator3', '0.1')
 from gi.repository import GObject, Gtk, AppIndicator3  # pyright: ignore
 
+from .nvidia import NVidiaGpuStats
+
 
 class Indicator(GObject.GObject):
     """Tray Indicator."""
@@ -26,6 +28,7 @@ class Indicator(GObject.GObject):
             AppIndicator3.IndicatorCategory.HARDWARE)
         self._app_indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
         self._gpu_name = "N/A"
+        self._gpu_stats = None
 
     def reset(self) -> None:
         """Reset indicator to default state."""
@@ -34,7 +37,19 @@ class Indicator(GObject.GObject):
     def set_gpu_name(self, gpu_name: str) -> None:
         """Set the GPU name in the applet mouseover text."""
         self._gpu_name = gpu_name
-        self._app_indicator.set_title(gpu_name)
+        self._update_title()
+
+    def set_gpu_stats(self, gpu_stats: NVidiaGpuStats) -> None:
+        """Set the GPU statistics in the applet mouseover text."""
+        self._gpu_stats = gpu_stats
+        self._update_title()
+
+    def _update_title(self):
+        if self._gpu_stats is None:
+            self._app_indicator.set_title(self._gpu_name)            
+        else:
+            title = "{} ({}%, {:.2f}W)".format(self._gpu_name, self._gpu_stats['gpu_util'], self._gpu_stats['power_draw'])
+            self._app_indicator.set_title(title)
 
     def _menu(self):
         menu = Gtk.Menu()

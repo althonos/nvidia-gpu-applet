@@ -67,7 +67,6 @@ class Application(Gtk.Application):
         self._switch_time: Optional[float] = None
         self._bg_notification_shown = False
 
-        self.gpu_info: Optional[NVidiaGpuInfo] = None
         self.window: Optional[MainWindow] = None
         self.indicator: Optional[Indicator] = None
 
@@ -78,17 +77,25 @@ class Application(Gtk.Application):
         """
         logging.debug('Got update from nvidia-smi')
 
-        timeout_expired = time.monotonic() - enabled_ts > MODULE_LOAD_TIMEOUT \
-            if enabled_ts else True
+        if enabled_ts:
+            timeout_expired = time.monotonic() - enabled_ts > MODULE_LOAD_TIMEOUT
+        else:
+            timeout_expired = True
+
+        if not self.window.is_visible():
+            gpu_stats = self.nvidia.gpu_stats(bus_id)
+            self.indicator.set_gpu_stats(gpu_stats)
+            return
+
         message = None
         try:
-            self.gpu_info = self.nvidia.gpu_info(bus_id)
+            gpu_info = self.nvidia.gpu_info(bus_id)
             if self.window:
-                if self.gpu_info is None:
+                if gpu_info is None:
                     # None return value means no kernel modules available
                     message = 'GPU is turned on, but NVIDIA kernel modules are not loaded'
                 else:
-                    self.window.update_monitor(self.gpu_info)
+                    self.window.update_monitor(gpu_info)
         except NvidiaMonitorException as err:
             message = str(err)
 
@@ -183,6 +190,13 @@ class Application(Gtk.Application):
             else:
                 self.indicator.set_gpu_name("No GPU detected.")
 
+        #
+        self.nvidia.monitor_start(
+            self.update_nvidia,
+            self._enabled_gpu,
+            self._switch_time
+        )
+
         return 0
 
     def _on_activate(self, widget=None, data=None):
@@ -219,7 +233,7 @@ class Application(Gtk.Application):
 
     def _on_window_hide(self, window):
         del window  # unused argument
-        self.nvidia.monitor_stop()
+        # self.nvidia.monitor_stop()
 
     def _on_window_close(self, window, event):
         del event  # unused argument

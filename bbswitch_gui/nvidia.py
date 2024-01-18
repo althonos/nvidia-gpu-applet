@@ -54,6 +54,25 @@ class NVidiaGpuInfo(TypedDict):
     """List of NVIDIA kernel modules loaded"""
 
 
+class NVidiaGpuStats(TypedDict):
+    """Class for storing GPU statistics."""
+
+    gpu_temp: int
+    """Temperature (°C)"""
+
+    power_draw: float
+    """Power usage (W)"""
+
+    mem_used: int
+    """Memory usage (MiB)"""
+
+    mem_total: int
+    """Total GPU memory (MiB)"""
+
+    gpu_util: int
+    """GPU utilization (%)"""
+
+
 class NvidiaMonitorException(Exception):
     """Exception thrown by :class:`NvidiaMonitor` class methods."""
 
@@ -116,6 +135,54 @@ class NvidiaMonitor():
             pynvml.nvmlInit()
             handle = pynvml.nvmlDeviceGetHandleByPciBusId(bus_id)
             return pynvml.nvmlDeviceGetName(handle)
+        except pynvml.NVMLError as err:
+            if err.value == pynvml.NVML_ERROR_DRIVER_NOT_LOADED:  # type: ignore
+                # If driver is not loaded, just ignore this and return None
+                return None
+            raise NvidiaMonitorException(f'NVMLError: {err}') from err
+        finally:
+            # Don't forget to release resources
+            if device_count != -1:
+                pynvml.nvmlShutdown()
+
+        raise NvidiaMonitorException(f'GPU {bus_id} not found in nvidia-smi')
+
+    def gpu_stats(self, bus_id: str) -> Optional[NVidiaGpuStats]:
+        """Return NVIDIA GPU statistics.
+
+        This is more lightweight than the GPU information since the 
+        processes and modules are not pulled.
+
+        :param bus_id: PCI bus ID of NVIDIA GPU
+        :raises: :class:`NvidiaMonitorException` on failure
+        """
+        res: NVidiaGpuStats = {
+            'gpu_temp': 0,
+            'power_draw': 0.0,
+            'mem_used': 0,
+            'mem_total': 0,
+            'gpu_util': 0,
+        }
+
+        device_count = -1
+        try:
+            pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByPciBusId(bus_id)
+
+            mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            res['mem_total'] = round(int(mem_info.total) / 1024 / 1024)
+            res['mem_used'] = round(int(mem_info.used) / 1024 / 1024)
+
+            util_rates = pynvml.nvmlDeviceGetUtilizationRates(handle)
+            res['gpu_util'] = int(util_rates.gpu)
+
+            gpu_temp = pynvml.nvmlDeviceGetTemperature(handle, pynvml.NVML_TEMPERATURE_GPU)
+            res['gpu_temp'] = gpu_temp
+
+            power_usage = pynvml.nvmlDeviceGetPowerUsage(handle)
+            res['power_draw'] = power_usage / 1000.0
+
+            return res
         except pynvml.NVMLError as err:
             if err.value == pynvml.NVML_ERROR_DRIVER_NOT_LOADED:  # type: ignore
                 # If driver is not loaded, just ignore this and return None
