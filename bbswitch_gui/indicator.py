@@ -48,7 +48,12 @@ class Indicator(GObject.GObject):
         if self._gpu_stats is None:
             self._app_indicator.set_title(self._gpu_name)            
         else:
-            title = "{} ({}%, {:.2f}W)".format(self._gpu_name, self._gpu_stats['gpu_util'], self._gpu_stats['power_draw'])
+            title = "{} ({}%, {:.2f}W, {}MHz)".format(
+                self._gpu_name, 
+                self._gpu_stats['gpu_util'], 
+                self._gpu_stats['power_draw'],
+                self._gpu_stats['gpu_freq'],
+            )
             self._app_indicator.set_title(title)
 
     def _menu(self):
