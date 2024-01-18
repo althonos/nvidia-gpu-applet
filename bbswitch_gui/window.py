@@ -117,7 +117,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # Update GPU parameters
         self.temperature_label.set_text(str(gpu_info['gpu_temp']) + ' °C')
-        self.power_label.set_text(f"{gpu_info['power_draw']:.2f} W")
+        self.power_label.set_text(f"{gpu_info['power_draw']:.2f} / {gpu_info['power_limit']:.0f} W")
         self.memory_label.set_text(str(gpu_info['mem_used']) + ' / '
                                    + format_mem(gpu_info['mem_total']))
         self.utilization_label.set_text(str(gpu_info['gpu_util']) + ' %')

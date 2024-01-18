@@ -190,9 +190,11 @@ class NvidiaMonitor():
             res['power_draw'] = power_usage / 1000.0
 
             try:
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(h)
-            except pynvml.NVMLError:
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(h)
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(handle)
+            except pynvml.NVMLError as err:
+                if err.value != pynvml.NVML_ERROR_NOT_SUPPORTED:
+                    raise
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(handle)
             res['power_limit'] = power_limit / 1000.0
 
             return res
@@ -249,9 +251,11 @@ class NvidiaMonitor():
             res['power_draw'] = power_usage / 1000.0
 
             try:
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(h)
-            except pynvml.NVMLError:
-                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(h)
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementLimit(handle)
+            except pynvml.NVMLError as err:
+                if err.value != pynvml.NVML_ERROR_NOT_SUPPORTED:
+                    raise
+                power_limit = pynvml.nvml.nvmlDeviceGetPowerManagementDefaultLimit(handle)
             res['power_limit'] = power_limit / 1000.0
 
             # Get all pids from fuser, they may be not visible through NVML
