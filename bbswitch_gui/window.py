@@ -112,14 +112,30 @@ class MainWindow(Gtk.ApplicationWindow):
         self._set_bar_stack_page('monitor')
 
         # Helper to convert memory in megabytes to string
-        def format_mem(mem: int) -> str:
-            return f'{mem} MiB' if mem != -1 else 'N/A'
+        def format_mem(used: int, total: int = None) -> str:
+            if used == -1:
+                return 'N/A'
+            if total is None:
+                total = used
+                limit = False
+            else:
+                limit = True
+            units = iter(['B', 'kiB', 'MiB', 'GiB', 'TiB'])
+            unit = next(units)
+            while total > 1024:
+                used /= 1024
+                total /= 1024
+                unit = next(units)
+            if unit == "B":
+                format_ = ""
+            else:
+                format_ = ".1f"
+            return f'{used:{format_}} / {total:{format_}} {unit}' if limit else f'{used:{format_}} {unit}'
 
         # Update GPU parameters
         self.temperature_label.set_text(str(gpu_info['gpu_temp']) + ' °C')
         self.power_label.set_text(f"{gpu_info['power_draw']:.2f} / {gpu_info['power_limit']:.0f} W")
-        self.memory_label.set_text(str(gpu_info['mem_used']) + ' / '
-                                   + format_mem(gpu_info['mem_total']))
+        self.memory_label.set_text(format_mem(gpu_info['mem_used'], gpu_info['mem_total']))
         self.utilization_label.set_text(str(gpu_info['gpu_util']) + ' %')
 
         # Update existing PIDs

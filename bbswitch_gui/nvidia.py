@@ -177,8 +177,8 @@ class NvidiaMonitor():
             handle = pynvml.nvmlDeviceGetHandleByPciBusId(bus_id)
 
             mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            res['mem_total'] = round(int(mem_info.total) / 1024 / 1024)
-            res['mem_used'] = round(int(mem_info.used) / 1024 / 1024)
+            res['mem_total'] = int(mem_info.total)
+            res['mem_used'] = int(mem_info.used)
 
             util_rates = pynvml.nvmlDeviceGetUtilizationRates(handle)
             res['gpu_util'] = int(util_rates.gpu)
@@ -238,8 +238,8 @@ class NvidiaMonitor():
             handle = pynvml.nvmlDeviceGetHandleByPciBusId(bus_id)
 
             mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-            res['mem_total'] = round(int(mem_info.total) / 1024 / 1024)
-            res['mem_used'] = round(int(mem_info.used) / 1024 / 1024)
+            res['mem_total'] = int(mem_info.total)
+            res['mem_used'] = int(mem_info.used)
 
             util_rates = pynvml.nvmlDeviceGetUtilizationRates(handle)
             res['gpu_util'] = int(util_rates.gpu)
