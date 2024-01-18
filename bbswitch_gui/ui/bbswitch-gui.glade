@@ -384,7 +384,7 @@
                           <object class="GtkImage">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
-                            <property name="icon-name">bbswitch-clock-symbolic</property>
+                            <property name="icon-name">bbswitch-gpu-symbolic</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -393,7 +393,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkLabel" id="freq_label">
+                          <object class="GtkLabel" id="utilization_label">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                           </object>
@@ -419,7 +419,7 @@
                           <object class="GtkImage">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
-                            <property name="icon-name">bbswitch-gpu-symbolic</property>
+                            <property name="icon-name">bbswitch-clock-symbolic</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>
@@ -428,7 +428,7 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkLabel" id="utilization_label">
+                          <object class="GtkLabel" id="freq_label">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                           </object>
@@ -442,7 +442,7 @@
                       <packing>
                         <property name="expand">False</property>
                         <property name="fill">True</property>
-                        <property name="position">3</property>
+                        <property name="position">4</property>
                       </packing>
                     </child>
                   </object>
