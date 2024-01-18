@@ -27,7 +27,6 @@ class MainWindow(Gtk.ApplicationWindow):
                                          GObject.TYPE_NONE, (bool,))
     }
 
-    state_switch = cast(Gtk.Switch, Gtk.Template.Child())
     modules_label = cast(Gtk.Label, Gtk.Template.Child())
 
     monitor_bar = cast(Gtk.InfoBar, Gtk.Template.Child())
@@ -83,8 +82,6 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def reset(self) -> None:
         """Reset window to default state."""
-        self.state_switch.set_state(False)
-        self.state_switch.set_sensitive(False)
         self.kill_button.set_sensitive(False)
         self.toggle_button.set_sensitive(False)
         self.processes_store.clear()
@@ -98,14 +95,6 @@ class MainWindow(Gtk.ApplicationWindow):
         :param vendor: PCI vendor name (or `None` if not available)
         :param device: PCI device name (or `None` if not available)
         """
-        if enabled and not self.state_switch.get_state():
-            self.show_info('Discrete graphics card is turned on')
-        else:
-            self.show_info('Discrete graphics card is turned off')
-
-        self.state_switch.set_state(enabled)
-        self.state_switch.set_sensitive(True)
-
         if device is None:
             self.header_bar.set_title(f'NVIDIA GPU on {bus_id}')
         else:
@@ -264,9 +253,3 @@ class MainWindow(Gtk.ApplicationWindow):
             self.processes_store.foreach(
                 lambda store, path, iter: store.set_value(iter, 3, False))
             self.kill_button.set_sensitive(False)
-
-    @Gtk.Template.Callback()
-    def _on_switch_released(self, switch: Gtk.Switch, gdata):
-        del gdata  # unused argument
-        self.emit('power-state-switch-requested', not switch.get_active())
-        return True  # state of the switch is managed programmatically
