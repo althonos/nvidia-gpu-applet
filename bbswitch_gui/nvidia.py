@@ -95,7 +95,7 @@ class NvidiaMonitor():
         try:
             pynvml.nvmlInit()
             device_count = pynvml.nvmlDeviceGetCount()
-            if device_count < device_id:
+            if device_count <= device_id:
                 return None
             handle = pynvml.nvmlDeviceGetHandleByIndex(device_id)
             pci_info = pynvml.nvmlDeviceGetPciInfo(handle)

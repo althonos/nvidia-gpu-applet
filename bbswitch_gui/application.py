@@ -54,6 +54,14 @@ class Application(Gtk.Application):
             'Minimize to system tray',
             None,
         )
+        self.add_main_option(
+            'device',
+            ord('d'),
+            GLib.OptionFlags.NONE,
+            GLib.OptionArg.INT,
+            'GPU device index to display',
+            "0",
+        )
 
         self._enabled_gpu: Optional[str] = None
         self._switch_time: Optional[float] = None
@@ -151,27 +159,14 @@ class Application(Gtk.Application):
         initialized = self.window is not None
 
         self.activate()
-        self._enabled_gpu = self.nvidia.default_bus_id()
 
         if self.window:
-            # Utility function for starting bbswitch monitor
-            # def bbswitch_monitor_start(window=None, is_active=None):
-            #     if window:
-            #         window.disconnect(connection)
-            #         if not is_active or not window.get_property(is_active.name):
-            #             return
-            #     self.bbswitch.monitor_start(self.update_bbswitch)
-
+            device_id = options.get('device', 0)
+            self._enabled_gpu = self.nvidia.get_bus_id(device_id)
             if 'minimize' in options:
-                # if not initialized:
-                    # Start bbswitch monitor right now
-                    # bbswitch_monitor_start()
                 self._bg_notification_shown = True
                 self.window.hide()
             else:
-                # if not initialized:
-                    # Start bbswitch monitor after window was activated
-                    # connection = self.window.connect('notify::is-active', bbswitch_monitor_start)
                 self.window.show()
 
         return 0
