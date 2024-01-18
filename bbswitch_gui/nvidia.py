@@ -110,6 +110,31 @@ class NvidiaMonitor():
             if device_count != -1:
                 pynvml.nvmlShutdown()
 
+    def gpu_name(self, bus_id: str) -> Optional[str]:
+        device_count = -1
+        try:
+            pynvml.nvmlInit()
+            device_count = pynvml.nvmlDeviceGetCount()
+            for i in range(0, device_count):
+                handle = pynvml.nvmlDeviceGetHandleByIndex(i)
+                pci_info = pynvml.nvmlDeviceGetPciInfo(handle)
+                if not self._check_bus_id(pci_info, bus_id):
+                    continue
+                name = pynvml.nvmlDeviceGetName(handle)
+                return name
+        except pynvml.NVMLError as err:
+            if err.value == pynvml.NVML_ERROR_DRIVER_NOT_LOADED:  # type: ignore
+                # If driver is not loaded, just ignore this and return None
+                return None
+
+            raise NvidiaMonitorException(f'NVMLError: {err}') from err
+        finally:
+            # Don't forget to release resources
+            if device_count != -1:
+                pynvml.nvmlShutdown()
+
+        raise NvidiaMonitorException(f'GPU {bus_id} not found in nvidia-smi')
+
     def gpu_info(self, bus_id: str) -> Optional[NVidiaGpuInfo]:
         """Return NVIDIA GPU information.
 

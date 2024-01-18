@@ -15,8 +15,6 @@ class Indicator(GObject.GObject):
                            GObject.TYPE_NONE, ()),
         'exit-requested': (GObject.SIGNAL_RUN_LAST,
                            GObject.TYPE_NONE, ()),
-        'power-state-switch-requested': (GObject.SIGNAL_RUN_LAST,
-                                         GObject.TYPE_NONE, (bool,))
     }
 
     def __init__(self, **kwargs) -> None:
@@ -27,22 +25,16 @@ class Indicator(GObject.GObject):
             'customtray', 'bbswitch-tray-symbolic',
             AppIndicator3.IndicatorCategory.HARDWARE)
         self._app_indicator.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
-        self._enabled = False
-        self._sensitive = False
+        self._gpu_name = "N/A"
 
     def reset(self) -> None:
         """Reset indicator to default state."""
-        self.set_state(False, False)
-
-    def set_state(self, enabled: bool, sensitive: bool = True) -> None:
-        """Set power state of dedicated GPU."""
-        self._enabled = enabled
-        self._sensitive = sensitive
-        self._app_indicator.set_icon('bbswitch-tray-active-symbolic' if enabled else
-                                     'bbswitch-tray-symbolic')
-        self._app_indicator.set_title('Discrete GPU: On' if enabled else
-                                      'Discrete GPU: Off')
         self._app_indicator.set_menu(self._menu())
+
+    def set_gpu_name(self, gpu_name: str) -> None:
+        """Set the GPU name in the applet mouseover text."""
+        self._gpu_name = gpu_name
+        self._app_indicator.set_title(gpu_name)
 
     def _menu(self):
         menu = Gtk.Menu()
@@ -65,7 +57,3 @@ class Indicator(GObject.GObject):
     def _request_exit(self, menuitem):
         del menuitem  # unused argument
         self.emit('exit-requested')
-
-    def _request_power_state_switch(self, menuitem):
-        del menuitem  # unused argument
-        self.emit('power-state-switch-requested', not self._enabled)

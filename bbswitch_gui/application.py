@@ -171,6 +171,11 @@ class Application(Gtk.Application):
 
         if self.indicator:
             self.indicator.reset()
+            if self._enabled_gpu:
+                gpu_name = self.nvidia.gpu_name(self._enabled_gpu)
+                self.indicator.set_gpu_name(gpu_name)
+            else:
+                self.indicator.set_gpu_name("No GPU detected.")
 
         return 0
 
