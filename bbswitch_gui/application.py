@@ -11,8 +11,6 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import GLib, Gio, Gtk  # pyright: ignore
 
 from .pciutil import PCIUtil, PCIUtilException
-from .bbswitch import BBswitchClient, BBswitchClientException
-from .bbswitch import BBswitchMonitor, BBswitchMonitorException
 from .nvidia import NVidiaGpuInfo, NvidiaMonitor, NvidiaMonitorException
 from .window import MainWindow
 from .indicator import Indicator
@@ -29,8 +27,6 @@ MODULE_LOAD_TIMEOUT = 5  # How long to wait until nvidia module become accessibl
 class Application(Gtk.Application):
     """Main application class allowing only one running instance."""
 
-    # bbswitch = BBswitchMonitor()
-    # client = BBswitchClient()
     nvidia = NvidiaMonitor(timeout=REFRESH_TIMEOUT)
 
     def __init__(self, *args, **kwargs) -> None:
@@ -66,50 +62,6 @@ class Application(Gtk.Application):
         self.gpu_info: Optional[NVidiaGpuInfo] = None
         self.window: Optional[MainWindow] = None
         self.indicator: Optional[Indicator] = None
-
-    def update_bbswitch(self) -> None:
-        """Update GPU state from `bbswitch` module."""
-        logging.debug('Got update from bbswitch')
-
-        bus_id, enabled, device, vendor = '', False, '', ''
-        try:
-            bus_id, enabled = self.nvidia.default_bus_id(), True  #self.bbswitch.get_gpu_state()
-            vendor, device = PCIUtil.get_device_info(PCIUtil.get_vendor_id(bus_id),
-                                                     PCIUtil.get_device_id(bus_id))
-        except BBswitchMonitorException as err:
-            message = str(err)
-            logger.error(message)
-            self.nvidia.monitor_stop()
-            if self.indicator:
-                self.indicator.reset()
-            if self.window:
-                self.window.reset()
-                self.window.show_error(message)
-            if not self.window or not self.window.is_visible():
-                self._notify_error('BBswitch monitor error', message)
-            return
-        except PCIUtilException as err:
-            logger.warning(err)
-
-        # If state is the same - skip it
-        if self._switch_time and bool(self._enabled_gpu) == enabled:
-            return
-
-        if self.indicator:
-            self.indicator.set_state(enabled)
-
-        if self.window:
-            self.window.update_header(bus_id, enabled, vendor, device)
-
-        if enabled:
-            logger.debug('Adapter %s is ON', bus_id)
-            self._enabled_gpu = bus_id
-            if self.window and self.window.is_visible():
-                self.nvidia.monitor_start(self.update_nvidia, bus_id, self._switch_time)
-        else:
-            self._enabled_gpu = None
-            logger.debug('Adapter %s is OFF', bus_id)
-            self.nvidia.monitor_stop()
 
     def update_nvidia(self, bus_id: str, enabled_ts: float) -> None:
         """Update GPU info from `nvidia` module.
