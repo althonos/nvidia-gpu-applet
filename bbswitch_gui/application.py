@@ -176,15 +176,6 @@ class Application(Gtk.Application):
 
         self.activate()
 
-        if self.window:
-            if 'minimize' in options:
-                self._bg_notification_shown = True
-                self.window.hide()
-                timeout = REFRESH_TIMEOUT_HIDDEN
-            else:
-                self.window.show()
-                timeout = REFRESH_TIMEOUT_VISIBLE
-
         if self.indicator:
             self.indicator.reset()
             if self._enabled_gpu:
@@ -193,13 +184,14 @@ class Application(Gtk.Application):
             else:
                 self.indicator.set_gpu_name("No GPU detected.")
 
-        #
-        self.nvidia.monitor_start(
-            timeout,
-            self.update_nvidia,
-            self._enabled_gpu,
-            self._switch_time
-        )
+        if self.window:
+            if 'minimize' in options:
+                self._bg_notification_shown = True
+                self.window.hide()
+                self._on_window_hide(self.window)
+            else:
+                self.window.show()
+                self._on_window_show(self.window)
 
         return 0
 
