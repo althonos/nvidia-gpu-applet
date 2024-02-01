@@ -285,7 +285,7 @@ class NvidiaMonitor():
                     continue
                 self._add_process(res['processes'],
                                     proc.pid,
-                                    round(proc.usedGpuMemory / 1024 / 1024))
+                                    proc.usedGpuMemory)
 
             # Add all fuser PIDs that were not present in NVML
             for pid in fuser_pids:
